@@ -30,11 +30,6 @@ import response
 # user_name = os.getlogin()
 # print(user_name)
 
-@ app.route('/')
-def index():
-
-    return "접속 완료"
-
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False  # jsonify 한글깨짐 해결
 CORS(app)
