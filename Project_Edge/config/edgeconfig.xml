@@ -1,0 +1,7 @@
+<Configuration>
+    <vms>
+        <IP>192.168.0.14</IP>
+        <Port>6432</Port>
+        <Path>usage</Path>
+    </vms>
+</Configuration>

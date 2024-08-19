@@ -4,36 +4,35 @@ from flask_cors import CORS, cross_origin
 import json
 import response
 
-
-# # sudo 사용으로 k8s config 설정 파일 위치 지정해주기
-# os.environ['KUBECONFIG'] = '/home/edge-master-01/.kube/config'
-#
-# app = Flask(__name__)
-# app.config['JSON_AS_ASCII'] = False  # jsonify 한글깨짐 해결
-# CORS(app)
-#
-# # 다른 서버에 명령 보낼때 사용
-# cli = paramiko.SSHClient()
-# cli.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-#
-# # 랜덤한 문자열 생성기
-# _LENGTH = 4
-# string_pool = string.ascii_letters + string.digits
-#
-# API_URL = "http://123.214.186.244:4880"
-#
-# # IP 주소
-# ips = subprocess.check_output("hostname -I", shell=True).decode('utf-8')
-# ip = ips.split(' ')[0]
-#
-# # host name
-# user_name = os.getlogin()
-# print(user_name)
-
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False  # jsonify 한글깨짐 해결
 CORS(app)
 
+# /res_edge_data(POST 추가)
+
+# - 기존 POST 방식에서 변경
+# - 매초 전달되는 json 파일 저장하기
+@app.route('/save_edgeData', methods=['POST'])
+def save_edgeData():
+    data = request.get_json(silent=True)
+    json_data = json.loads(data)
+
+    code = json_data['code']
+    message = json_data['message']
+    nid = json_data['nid']
+    created_at = json_data['created_at']
+    res_class = json_data['res_class']
+    res_confidence = json_data['created_at']
+
+    print(f"code : {code} // message : {message} // nid : {nid} // time : {created_at} // res_class : {res_class} // res_confidence : {res_confidence}")
+
+    # db에 저장하는 기능
+
+
+    return response.message('0000')
+
+
+# TEST SW 데이터 전송받는 API
 @app.route('/usage', methods=['POST'])
 def usage():
     data = request.get_json(silent=True)
@@ -47,7 +46,6 @@ def usage():
     print(f"User Name : {username} // Function : {func} // CPU Usage : {cpu_usage}% // Memory Usage : {memory_usage}%")
 
     return "usage"
-
 
 
 if __name__ == '__main__':
