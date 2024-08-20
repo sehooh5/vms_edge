@@ -50,12 +50,12 @@ def index():
 
 #######
 # (예시) vms 유저 정보
-user_list = ["keti", "kim"]
+# user_list = ["root", "kim"]
 user_info_dict = {
-    "keti": {
-        "password": "keti123",
+    "root": {
+        "password": "keti",
         "userInfo": {
-            "userName": "keti",
+            "userName": "root",
             "userLevel": "Administrator"
         }
     },
@@ -67,8 +67,9 @@ user_info_dict = {
         }
     }
 }
+
 # 시스템 간 인증 요청 응답: 엣지 - VMS
-@ app.route('/auth_req', methods=['POST'])
+@ app.route('/user_auth', methods=['POST'])
 def check_auth():
     AuthenticationRequest = request.get_json()
 
@@ -77,35 +78,38 @@ def check_auth():
     pw_req = AuthenticationRequest['PW']
     print(id_req, pw_req)
 
-    if id_req in user_list:
+    if id_req in user_info_dict.keys():
         if pw_req == user_info_dict[id_req]['password']:
             res = jsonify(
-                code="0000",
-                message="AuthenticationResponse",
+                code="200",
+                message="OK",
                 userInfo=user_info_dict[id_req]['userInfo']
             )
         else:
             res = jsonify(
-                code="1111",
+                code="400",
                 message="AuthenticationFail",
             )
     else:
         res = jsonify(
-            code="1111",
+            code="400",
             message="AuthenticationFail",
         )
 
     return res
 
 # (예시) 카메라 단말 프로파일 정보
-profiles = ["cam_1_token", "cam_1_profile"]
+profiles = [{
+    "profileToken": "cam_1_token",
+    "profileName": "cam_1_profile"
+}]
 # 카메라 단말 프로파일 요청 응답: 엣지 - VMS
 @ app.route('/profiles', methods=['GET'])
 def send_cam_profiles():
     
     res = jsonify(
-        code="0000",
-        message="ProfilesResponse",
+        code="200",
+        message="OK",
         profiles=profiles
     )
     
@@ -117,7 +121,7 @@ device_info = {
     "deviceType": "Wired_PTZ"
 }
 # 카메라 단말 부가정보 요청 응답: 엣지 - VMS
-@app.route('/device_info', methods=['POST'])
+@ app.route('/device_info', methods=['POST'])
 def send_device_info():
     VideoDeviceInfoRequest = request.get_json()
 
@@ -125,25 +129,27 @@ def send_device_info():
     token = VideoDeviceInfoRequest['profileToken']
     print(token)
 
-    if token == profiles[0]:
+    if token == profiles[0]['profileToken']:
         res = jsonify(
-            code="0000",
-            message="VideoDeviceInfoResponse",
+            code="200",
+            message="OK",
             deviceInfo=device_info
         )
     else:
         res = jsonify(
-            code="1111",
-            message="DeviceNotExist",
+            code="400",
+            message="TokenNotFound",
         )
     
     return res
 
-# (예시) 카메라 영상 정보
-stream_base = "192.168.0.76/"
+# (예시) 카메라 영상 취득 경로 정보
+stream_addr = "192.168.0.93/onvif-media/media.amp"
+user_id = "root"
+user_pw = user_info_dict[user_id]['password']
 # 카메라 단말 영상정보 요청 응답: 엣지 - VMS
-@app.route('/stream_info', methods=['POST'])
-def send_video_info():
+@ app.route('/stream_info', methods=['POST'])
+def send_stream_info():
     StreamUriRequest = request.get_json()
 
     # 카메라 단말 프로필 토큰
@@ -153,54 +159,73 @@ def send_video_info():
     print(token)
     print(stream_setup)
 
-    if token == profiles[0]:
-        uri = stream_base + stream_setup['stream'] + '/' + stream_setup['protocol']
+    if token == profiles[0]['profileToken']:
+        uri = stream_setup['protocol'] + '://' + user_id + ":" + user_pw + "@" + stream_addr
 
         res = jsonify(
-            code="0000",
-            message="StreamUriResponse",
+            code="200",
+            message="OK",
             URI=uri
         )
     else:
         res = jsonify(
-            code="1111",
-            message="DeviceNotExist",
+            code="400",
+            message="TokenNotFound",
         )
     
     return res
 
-# (예시) 영상 분석 정보
-analyzed_events = {
-    "deviceName": "camera1",
-    "eventDataList": {
-        "eventID": "event01",
-        "eventName": "넘어짐",
-        "startTime": "2024-08-09 17:59:00",
-        "duration": "1280"
-    }
-}
 # 실시간 영상 분석 정보 요청 응답: 엣지 - VMS
-@app.route('/realtime_events', methods=['POST'])
+@ app.route('/realtime_analysis', methods=['POST'])
 def send_realtime_events():
     RealtimeEventRequest = request.get_json()
 
     # 카메라 단말 프로필 토큰
     token = RealtimeEventRequest['profileToken']
     # 연동 지속 시간
-    duration = RealtimeEventRequest['duration']
-    print(token, duration)
+    # duration = RealtimeEventRequest['duration']
+    print(token)
 
-    if token == profiles[0]:
+    analyses = []
 
+    if token == profiles[0]['profileToken']:
+        analysis = dict()
+        analysis['deviceName'] = profiles[0]['profileName']
+
+        # 최신 kitti result 파일명 확인 command
+        cmd = "ls -tr | tail -1"
+        # detection 결과 저장 위치
+        cwd = "/home/ykkim/workspace/DeepStream-Yolo/kitti_outputs/"
+        proc = subprocess.Popen(cmd, cwd=cwd, shell=True, stdout=subprocess.PIPE, encoding='utf-8')
+        result_filename = proc.stdout.readline().strip()
+
+        print(result_filename)
+        objectDataList = []
+        idx = 0
+        with open(cwd + result_filename, "r") as f:
+            lines = f.readlines()
+            for line in lines:
+                tmp = line.strip().split()
+                objectData = dict()
+                objectData['objectID'] = "object" + str(idx)
+                objectData['objectType'] = tmp[0]
+                # left, top, right, bottom
+                objectData['bbox'] = [tmp[4], tmp[5], tmp[6], tmp[7]]
+                objectData['confidence'] = tmp[15]
+                idx+=1
+                objectDataList.append(objectData)
+        analysis['analysisDataList'] = objectDataList
+
+        analyses.append(analysis)
         res = jsonify(
-            code="0000",
-            message="RealtimeEventResponse",
-            events=analyzed_events
+            code="200",
+            message="OK",
+            analyses=analyses
         )
     else:
         res = jsonify(
-            code="1111",
-            message="DeviceNotExist",
+            code="400",
+            message="TokenNotFound",
         )
     
     return res
