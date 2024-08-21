@@ -2,6 +2,7 @@
     <vms>
         <IP>192.168.0.14</IP>
         <Port>6432</Port>
-        <Path>usage</Path>
+        <Path>save_edgeData</Path>
     </vms>
+	<interval>1</interval>
 </Configuration>
