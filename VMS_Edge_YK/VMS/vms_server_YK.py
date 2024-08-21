@@ -42,11 +42,9 @@ print(user_name)
 # file path
 # file_path = f"/home/{user_name}/"
 
-@ app.route('/')
+@ app.route('/index')
 def index():
-
-
-    return "접속 완료"
+    return render_template('index.html')
 
 #######
 
