@@ -41,9 +41,9 @@ def usage():
     username = json_data['username']
     cpu_usage = json_data['cpu']
     memory_usage = json_data['memory']
-    func = json_data['func']
+    ai_class = json_data['ai_class']
 
-    print(f"User Name : {username} // Function : {func} // CPU Usage : {cpu_usage}% // Memory Usage : {memory_usage}%")
+    print(f"User Name : {username} // AI_class : {ai_class} // CPU Usage : {cpu_usage}% // Memory Usage : {memory_usage}%")
 
     return "usage"
 
